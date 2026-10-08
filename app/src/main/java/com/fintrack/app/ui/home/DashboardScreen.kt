@@ -19,23 +19,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.fintrack.app.data.repository.MockFinanceRepository
-import com.fintrack.app.domain.model.Transaction
 import com.fintrack.app.domain.model.TransactionType
-import com.fintrack.app.domain.usecase.GetMonthlyOverviewUseCase
 import java.text.NumberFormat
-import java.time.YearMonth
 import java.util.Locale
 
 @Composable
 fun DashboardScreen(
     email: String,
+    state: HomeUiState,
     onLogout: () -> Unit
 ) {
-    val month = YearMonth.now()
-    val repository = remember { MockFinanceRepository() }
-    val transactions = remember { repository.getTransactions() }
-    val overview = remember { GetMonthlyOverviewUseCase(repository)(month) }
     val currencyFormat = remember {
         NumberFormat.getCurrencyInstance(Locale.forLanguageTag("nb-NO"))
     }
@@ -68,9 +61,7 @@ fun DashboardScreen(
                     Text("Monthly balance", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = currencyFormat.format(
-                            (overview.incomeMinorUnits - overview.expensesMinorUnits) / 100.0
-                        ),
+                        text = currencyFormat.format(state.balanceMinorUnits / 100.0),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -84,13 +75,13 @@ fun DashboardScreen(
             ) {
                 SummaryCard(
                     title = "Income",
-                    amount = overview.incomeMinorUnits,
+                    amount = state.incomeMinorUnits,
                     modifier = Modifier.weight(1f),
                     currencyFormat = currencyFormat
                 )
                 SummaryCard(
                     title = "Expenses",
-                    amount = overview.expensesMinorUnits,
+                    amount = state.expensesMinorUnits,
                     modifier = Modifier.weight(1f),
                     currencyFormat = currencyFormat
                 )
@@ -102,7 +93,7 @@ fun DashboardScreen(
                     Text("Remaining budget", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        currencyFormat.format(overview.remainingBudgetMinorUnits / 100.0),
+                        currencyFormat.format(state.remainingBudgetMinorUnits / 100.0),
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
@@ -115,7 +106,7 @@ fun DashboardScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
-        items(transactions.sortedByDescending(Transaction::date)) { transaction ->
+        items(state.transactions, key = { it.id }) { transaction ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier

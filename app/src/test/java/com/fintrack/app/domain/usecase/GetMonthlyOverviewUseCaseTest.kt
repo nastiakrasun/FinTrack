@@ -1,6 +1,8 @@
 package com.fintrack.app.domain.usecase
 
 import com.fintrack.app.data.repository.MockFinanceRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.YearMonth
@@ -9,10 +11,8 @@ class GetMonthlyOverviewUseCaseTest {
     private val month = YearMonth.of(2026, 9)
 
     @Test
-    fun calculatesMonthlyTotalsAndCategoryExpenses() {
-        val overview = GetMonthlyOverviewUseCase(MockFinanceRepository(month))(
-            month
-        )
+    fun calculatesMonthlyTotalsAndCategoryExpenses() = runTest {
+        val overview = GetMonthlyOverviewUseCase(MockFinanceRepository(month))(month).first()
 
         assertEquals(4_200_000L, overview.incomeMinorUnits)
         assertEquals(2_858_80L, overview.expensesMinorUnits)
@@ -23,10 +23,8 @@ class GetMonthlyOverviewUseCaseTest {
     }
 
     @Test
-    fun returnsEmptyTotalsForMonthWithoutTransactionsOrBudgets() {
-        val overview = GetMonthlyOverviewUseCase(MockFinanceRepository(month))(
-            month.plusMonths(1)
-        )
+    fun returnsEmptyTotalsForMonthWithoutTransactionsOrBudgets() = runTest {
+        val overview = GetMonthlyOverviewUseCase(MockFinanceRepository(month))(month.plusMonths(1)).first()
 
         assertEquals(0L, overview.incomeMinorUnits)
         assertEquals(0L, overview.expensesMinorUnits)

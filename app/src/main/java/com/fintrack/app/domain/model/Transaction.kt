@@ -15,3 +15,7 @@ data class Transaction(
     val categoryId: String?,
     val date: LocalDate
 )
+
+// Newest date first; for the same date, the most recently added transaction comes first.
+fun List<Transaction>.newestFirst(): List<Transaction> =
+    asReversed().sortedByDescending(Transaction::date)
