@@ -7,6 +7,8 @@ import com.fintrack.app.domain.model.Transaction
 interface FinanceRepository {
     fun getTransactions(): List<Transaction>
 
+    fun addTransaction(transaction: Transaction)
+
     fun getCategories(): List<Category>
 
     fun getBudgets(): List<Budget>

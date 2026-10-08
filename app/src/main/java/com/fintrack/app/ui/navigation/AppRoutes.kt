@@ -7,6 +7,7 @@ object AppRoutes {
     const val TRANSACTIONS = "transactions"
     const val BUDGET = "budget"
     const val STATISTICS = "statistics"
+    const val ADD_TRANSACTION = "add_transaction"
 
     val main = listOf(HOME, TRANSACTIONS, BUDGET, STATISTICS)
 }

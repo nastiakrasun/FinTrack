@@ -20,7 +20,7 @@ class MockFinanceRepository(
         Category(id = "salary", name = "Salary", type = CategoryType.INCOME)
     )
 
-    private val transactions = listOf(
+    private val transactions = mutableListOf(
         transaction("salary", "Salary", 42_000_00, TransactionType.INCOME, "salary", 1),
         transaction("rema-1", "REMA 1000", 684_50, TransactionType.EXPENSE, "groceries", 3),
         transaction("vy-1", "Vy", 429_00, TransactionType.EXPENSE, "transport", 5),
@@ -38,7 +38,11 @@ class MockFinanceRepository(
         Budget("dining-monthly", "dining", demoMonth, 2_000_00)
     )
 
-    override fun getTransactions(): List<Transaction> = transactions
+    override fun getTransactions(): List<Transaction> = transactions.toList()
+
+    override fun addTransaction(transaction: Transaction) {
+        transactions.add(transaction)
+    }
 
     override fun getCategories(): List<Category> = categories
 

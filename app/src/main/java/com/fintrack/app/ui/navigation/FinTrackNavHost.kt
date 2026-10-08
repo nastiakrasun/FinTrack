@@ -1,8 +1,8 @@
 package com.fintrack.app.ui.navigation
 
-import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -31,23 +31,42 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.fintrack.app.data.repository.InMemoryDemoAuthRepository
+import com.fintrack.app.data.repository.MockFinanceRepository
 import com.fintrack.app.domain.repository.AuthResult
 import com.fintrack.app.ui.auth.LoginScreen
 import com.fintrack.app.ui.auth.RegistrationScreen
+import com.fintrack.app.ui.form.validateConfirmPassword
+import com.fintrack.app.ui.form.validateEmail
+import com.fintrack.app.ui.form.validatePassword
 import com.fintrack.app.ui.home.DashboardScreen
+import com.fintrack.app.ui.transactions.AddTransactionScreen
+import com.fintrack.app.ui.transactions.TransactionsScreen
 
 @Composable
 fun FinTrackNavHost() {
     val navController = rememberNavController()
     val authRepository = remember { InMemoryDemoAuthRepository() }
+    val financeRepository = remember { MockFinanceRepository() }
+    val categories = remember { financeRepository.getCategories() }
+    var transactions by remember { mutableStateOf(financeRepository.getTransactions()) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+    var formError by remember { mutableStateOf<String?>(null) }
     var signedInEmail by remember { mutableStateOf("") }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val showNavigationBar = currentDestination?.route?.let { it in AppRoutes.main } == true
+
+    fun clearErrors() {
+        emailError = null
+        passwordError = null
+        confirmPasswordError = null
+        formError = null
+    }
 
     Scaffold(
         bottomBar = {
@@ -79,51 +98,51 @@ fun FinTrackNavHost() {
         NavHost(
             navController = navController,
             startDestination = AppRoutes.LOGIN,
-            modifier = Modifier.padding(contentPadding)
+            modifier = Modifier
+                .padding(contentPadding)
+                .consumeWindowInsets(contentPadding)
         ) {
             composable(AppRoutes.LOGIN) {
                 LoginScreen(
                     email = email,
                     password = password,
-                    errorMessage = errorMessage,
+                    emailError = emailError,
+                    passwordError = passwordError,
+                    formError = formError,
                     onEmailChange = {
                         email = it
-                        errorMessage = null
+                        emailError = null
+                        formError = null
                     },
                     onPasswordChange = {
                         password = it
-                        errorMessage = null
+                        passwordError = null
+                        formError = null
                     },
                     onLogin = {
                         val normalizedEmail = email.trim()
-                        when {
-                            !Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches() ->
-                                errorMessage = "Enter a valid email address."
-
-                            password.isBlank() ->
-                                errorMessage = "Enter your password."
-
-                            else -> {
-                                val result = authRepository.login(
-                                    normalizedEmail,
-                                    password.toCharArray()
-                                )
-                                password = ""
-                                if (result == AuthResult.SUCCESS) {
-                                    signedInEmail = normalizedEmail
-                                    errorMessage = null
-                                    navController.navigate(AppRoutes.HOME) {
-                                        popUpTo(AppRoutes.LOGIN) { inclusive = true }
-                                        launchSingleTop = true
-                                    }
-                                } else {
-                                    errorMessage = "Email or password is incorrect."
+                        emailError = validateEmail(normalizedEmail)
+                        passwordError = validatePassword(password)
+                        formError = null
+                        if (emailError == null && passwordError == null) {
+                            val result = authRepository.login(
+                                normalizedEmail,
+                                password.toCharArray()
+                            )
+                            password = ""
+                            if (result == AuthResult.SUCCESS) {
+                                signedInEmail = normalizedEmail
+                                navController.navigate(AppRoutes.HOME) {
+                                    popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                                    launchSingleTop = true
                                 }
+                            } else {
+                                formError = "Email or password is incorrect."
                             }
                         }
                     },
                     onRegisterClick = {
-                        errorMessage = null
+                        clearErrors()
                         password = ""
                         navController.navigate(AppRoutes.REGISTER)
                     }
@@ -135,62 +154,62 @@ fun FinTrackNavHost() {
                     email = email,
                     password = password,
                     confirmPassword = confirmPassword,
-                    errorMessage = errorMessage,
+                    emailError = emailError,
+                    passwordError = passwordError,
+                    confirmPasswordError = confirmPasswordError,
+                    formError = formError,
                     onEmailChange = {
                         email = it
-                        errorMessage = null
+                        emailError = null
+                        formError = null
                     },
                     onPasswordChange = {
                         password = it
-                        errorMessage = null
+                        passwordError = null
+                        confirmPasswordError = null
+                        formError = null
                     },
                     onConfirmPasswordChange = {
                         confirmPassword = it
-                        errorMessage = null
+                        confirmPasswordError = null
+                        formError = null
                     },
                     onRegister = {
                         val normalizedEmail = email.trim()
-                        when {
-                            !Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches() ->
-                                errorMessage = "Enter a valid email address."
-
-                            password.length < MIN_PASSWORD_LENGTH ->
-                                errorMessage = "Password must be at least 8 characters."
-
-                            password != confirmPassword ->
-                                errorMessage = "Passwords do not match."
-
-                            else -> {
-                                val result = authRepository.register(
-                                    normalizedEmail,
-                                    password.toCharArray()
-                                )
-                                password = ""
-                                confirmPassword = ""
-                                when (result) {
-                                    AuthResult.SUCCESS -> {
-                                        signedInEmail = normalizedEmail
-                                        errorMessage = null
-                                        navController.navigate(AppRoutes.HOME) {
-                                            popUpTo(AppRoutes.LOGIN) { inclusive = true }
-                                            launchSingleTop = true
-                                        }
+                        emailError = validateEmail(normalizedEmail)
+                        passwordError = validatePassword(password)
+                        confirmPasswordError = validateConfirmPassword(password, confirmPassword)
+                        formError = null
+                        if (emailError == null && passwordError == null &&
+                            confirmPasswordError == null
+                        ) {
+                            val result = authRepository.register(
+                                normalizedEmail,
+                                password.toCharArray()
+                            )
+                            password = ""
+                            confirmPassword = ""
+                            when (result) {
+                                AuthResult.SUCCESS -> {
+                                    signedInEmail = normalizedEmail
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                                        launchSingleTop = true
                                     }
-
-                                    AuthResult.EMAIL_ALREADY_REGISTERED ->
-                                        errorMessage =
-                                            "An account with this email already exists."
-
-                                    AuthResult.INVALID_CREDENTIALS ->
-                                        errorMessage = "Registration failed. Please try again."
                                 }
+
+                                AuthResult.EMAIL_ALREADY_REGISTERED ->
+                                    emailError = "An account with this email already exists."
+
+                                AuthResult.INVALID_CREDENTIALS ->
+                                    formError = "Registration failed. Please try again."
                             }
                         }
                     },
                     onLoginClick = {
                         password = ""
                         confirmPassword = ""
-                        errorMessage = null
+                        clearErrors()
                         navController.popBackStack(
                             route = AppRoutes.REGISTER,
                             inclusive = true
@@ -202,12 +221,14 @@ fun FinTrackNavHost() {
             composable(AppRoutes.HOME) {
                 DashboardScreen(
                     email = signedInEmail,
+                    financeRepository = financeRepository,
+                    transactions = transactions,
                     onLogout = {
                         signedInEmail = ""
                         email = ""
                         password = ""
                         confirmPassword = ""
-                        errorMessage = null
+                        clearErrors()
                         navController.navigate(AppRoutes.LOGIN) {
                             popUpTo(AppRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
@@ -217,9 +238,22 @@ fun FinTrackNavHost() {
             }
 
             composable(AppRoutes.TRANSACTIONS) {
-                PlaceholderScreen(
-                    title = "Transactions",
-                    message = "Your transactions will appear here"
+                TransactionsScreen(
+                    transactions = transactions,
+                    categories = categories,
+                    onAddTransaction = { navController.navigate(AppRoutes.ADD_TRANSACTION) }
+                )
+            }
+
+            composable(AppRoutes.ADD_TRANSACTION) {
+                AddTransactionScreen(
+                    categories = categories,
+                    onSave = { transaction ->
+                        financeRepository.addTransaction(transaction)
+                        transactions = financeRepository.getTransactions()
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -273,5 +307,3 @@ private val mainNavigationItems = listOf(
     MainNavigationItem(AppRoutes.BUDGET, "Budget", Icons.Filled.AccountBalanceWallet),
     MainNavigationItem(AppRoutes.STATISTICS, "Statistics", Icons.Filled.BarChart)
 )
-
-private const val MIN_PASSWORD_LENGTH = 8

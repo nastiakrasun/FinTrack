@@ -8,25 +8,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.fintrack.app.ui.components.FormTextField
+import com.fintrack.app.ui.components.PasswordField
+import com.fintrack.app.ui.form.MIN_PASSWORD_LENGTH
 
 @Composable
 fun LoginScreen(
     email: String,
     password: String,
-    errorMessage: String?,
+    emailError: String?,
+    passwordError: String?,
+    formError: String?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit,
@@ -37,7 +40,9 @@ fun LoginScreen(
         subtitle = "Sign in to continue to FinTrack.",
         email = email,
         password = password,
-        errorMessage = errorMessage,
+        emailError = emailError,
+        passwordError = passwordError,
+        formError = formError,
         submitLabel = "Log in",
         onEmailChange = onEmailChange,
         onPasswordChange = onPasswordChange,
@@ -55,7 +60,10 @@ fun RegistrationScreen(
     email: String,
     password: String,
     confirmPassword: String,
-    errorMessage: String?,
+    emailError: String?,
+    passwordError: String?,
+    confirmPasswordError: String?,
+    formError: String?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
@@ -67,12 +75,15 @@ fun RegistrationScreen(
         subtitle = "Start keeping track of your finances.",
         email = email,
         password = password,
-        errorMessage = errorMessage,
+        emailError = emailError,
+        passwordError = passwordError,
+        formError = formError,
         submitLabel = "Create account",
         onEmailChange = onEmailChange,
         onPasswordChange = onPasswordChange,
         onSubmit = onRegister,
         confirmPassword = confirmPassword,
+        confirmPasswordError = confirmPasswordError,
         onConfirmPasswordChange = onConfirmPasswordChange,
         footer = {
             TextButton(onClick = onLoginClick) {
@@ -88,12 +99,15 @@ private fun AuthForm(
     subtitle: String,
     email: String,
     password: String,
-    errorMessage: String?,
+    emailError: String?,
+    passwordError: String?,
+    formError: String?,
     submitLabel: String,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSubmit: () -> Unit,
     confirmPassword: String? = null,
+    confirmPasswordError: String? = null,
     onConfirmPasswordChange: ((String) -> Unit)? = null,
     footer: @Composable () -> Unit
 ) {
@@ -116,41 +130,39 @@ private fun AuthForm(
         Text(text = subtitle, style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(24.dp))
 
-        OutlinedTextField(
+        val isRegistration = confirmPassword != null && onConfirmPasswordChange != null
+
+        FormTextField(
             value = email,
             onValueChange = onEmailChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Email") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            label = "Email",
+            error = emailError,
+            keyboardType = KeyboardType.Email
         )
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
+        Spacer(Modifier.height(4.dp))
+        PasswordField(
             value = password,
             onValueChange = onPasswordChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            label = "Password",
+            error = passwordError,
+            helper = if (isRegistration) "At least $MIN_PASSWORD_LENGTH characters." else null,
+            imeAction = if (isRegistration) ImeAction.Next else ImeAction.Done
         )
         if (confirmPassword != null && onConfirmPasswordChange != null) {
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
+            Spacer(Modifier.height(4.dp))
+            PasswordField(
                 value = confirmPassword,
                 onValueChange = onConfirmPasswordChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Confirm password") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                label = "Confirm password",
+                error = confirmPasswordError,
+                imeAction = ImeAction.Done
             )
         }
 
-        if (errorMessage != null) {
+        if (formError != null) {
             Spacer(Modifier.height(12.dp))
             Text(
-                text = errorMessage,
+                text = formError,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
