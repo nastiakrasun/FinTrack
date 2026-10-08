@@ -17,55 +17,56 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.fintrack.app.data.repository.InMemoryDemoAuthRepository
-import com.fintrack.app.data.repository.MockFinanceRepository
-import com.fintrack.app.domain.repository.AuthResult
+import com.fintrack.app.ui.auth.AuthViewModel
 import com.fintrack.app.ui.auth.LoginScreen
 import com.fintrack.app.ui.auth.RegistrationScreen
-import com.fintrack.app.ui.form.validateConfirmPassword
-import com.fintrack.app.ui.form.validateEmail
-import com.fintrack.app.ui.form.validatePassword
 import com.fintrack.app.ui.home.DashboardScreen
+import com.fintrack.app.ui.home.HomeViewModel
 import com.fintrack.app.ui.transactions.AddTransactionScreen
+import com.fintrack.app.ui.transactions.TransactionViewModel
 import com.fintrack.app.ui.transactions.TransactionsScreen
 
 @Composable
-fun FinTrackNavHost() {
+fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
     val navController = rememberNavController()
-    val authRepository = remember { InMemoryDemoAuthRepository() }
-    val financeRepository = remember { MockFinanceRepository() }
-    val categories = remember { financeRepository.getCategories() }
-    var transactions by remember { mutableStateOf(financeRepository.getTransactions()) }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-    var formError by remember { mutableStateOf<String?>(null) }
-    var signedInEmail by remember { mutableStateOf("") }
+    // Activity-scoped: login and registration share one form state that survives rotation.
+    val authViewModel: AuthViewModel = viewModel(factory = viewModelFactory)
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
-    val showNavigationBar = currentDestination?.route?.let { it in AppRoutes.main } == true
+    val currentRoute = currentDestination?.route
+    val showNavigationBar = currentRoute?.let { it in AppRoutes.main } == true
 
-    fun clearErrors() {
-        emailError = null
-        passwordError = null
-        confirmPasswordError = null
-        formError = null
+    // Navigation stays in the UI: the ViewModel only exposes whether the user is signed in.
+    LaunchedEffect(authState.signedInEmail, currentRoute) {
+        val isSignedIn = authState.signedInEmail != null
+        when {
+            isSignedIn && currentRoute in AppRoutes.unauthenticated ->
+                navController.navigate(AppRoutes.HOME) {
+                    popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                    launchSingleTop = true
+                }
+
+            !isSignedIn && currentRoute in AppRoutes.authenticated ->
+                navController.navigate(AppRoutes.LOGIN) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+        }
     }
 
     Scaffold(
@@ -104,46 +105,17 @@ fun FinTrackNavHost() {
         ) {
             composable(AppRoutes.LOGIN) {
                 LoginScreen(
-                    email = email,
-                    password = password,
-                    emailError = emailError,
-                    passwordError = passwordError,
-                    formError = formError,
-                    onEmailChange = {
-                        email = it
-                        emailError = null
-                        formError = null
-                    },
-                    onPasswordChange = {
-                        password = it
-                        passwordError = null
-                        formError = null
-                    },
-                    onLogin = {
-                        val normalizedEmail = email.trim()
-                        emailError = validateEmail(normalizedEmail)
-                        passwordError = validatePassword(password)
-                        formError = null
-                        if (emailError == null && passwordError == null) {
-                            val result = authRepository.login(
-                                normalizedEmail,
-                                password.toCharArray()
-                            )
-                            password = ""
-                            if (result == AuthResult.SUCCESS) {
-                                signedInEmail = normalizedEmail
-                                navController.navigate(AppRoutes.HOME) {
-                                    popUpTo(AppRoutes.LOGIN) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            } else {
-                                formError = "Email or password is incorrect."
-                            }
-                        }
-                    },
+                    email = authState.email,
+                    password = authState.password,
+                    emailError = authState.emailError,
+                    passwordError = authState.passwordError,
+                    formError = authState.formError,
+                    isLoading = authState.isLoading,
+                    onEmailChange = authViewModel::onEmailChange,
+                    onPasswordChange = authViewModel::onPasswordChange,
+                    onLogin = authViewModel::login,
                     onRegisterClick = {
-                        clearErrors()
-                        password = ""
+                        authViewModel.onAuthScreenSwitched()
                         navController.navigate(AppRoutes.REGISTER)
                     }
                 )
@@ -151,65 +123,20 @@ fun FinTrackNavHost() {
 
             composable(AppRoutes.REGISTER) {
                 RegistrationScreen(
-                    email = email,
-                    password = password,
-                    confirmPassword = confirmPassword,
-                    emailError = emailError,
-                    passwordError = passwordError,
-                    confirmPasswordError = confirmPasswordError,
-                    formError = formError,
-                    onEmailChange = {
-                        email = it
-                        emailError = null
-                        formError = null
-                    },
-                    onPasswordChange = {
-                        password = it
-                        passwordError = null
-                        confirmPasswordError = null
-                        formError = null
-                    },
-                    onConfirmPasswordChange = {
-                        confirmPassword = it
-                        confirmPasswordError = null
-                        formError = null
-                    },
-                    onRegister = {
-                        val normalizedEmail = email.trim()
-                        emailError = validateEmail(normalizedEmail)
-                        passwordError = validatePassword(password)
-                        confirmPasswordError = validateConfirmPassword(password, confirmPassword)
-                        formError = null
-                        if (emailError == null && passwordError == null &&
-                            confirmPasswordError == null
-                        ) {
-                            val result = authRepository.register(
-                                normalizedEmail,
-                                password.toCharArray()
-                            )
-                            password = ""
-                            confirmPassword = ""
-                            when (result) {
-                                AuthResult.SUCCESS -> {
-                                    signedInEmail = normalizedEmail
-                                    navController.navigate(AppRoutes.HOME) {
-                                        popUpTo(AppRoutes.LOGIN) { inclusive = true }
-                                        launchSingleTop = true
-                                    }
-                                }
-
-                                AuthResult.EMAIL_ALREADY_REGISTERED ->
-                                    emailError = "An account with this email already exists."
-
-                                AuthResult.INVALID_CREDENTIALS ->
-                                    formError = "Registration failed. Please try again."
-                            }
-                        }
-                    },
+                    email = authState.email,
+                    password = authState.password,
+                    confirmPassword = authState.confirmPassword,
+                    emailError = authState.emailError,
+                    passwordError = authState.passwordError,
+                    confirmPasswordError = authState.confirmPasswordError,
+                    formError = authState.formError,
+                    isLoading = authState.isLoading,
+                    onEmailChange = authViewModel::onEmailChange,
+                    onPasswordChange = authViewModel::onPasswordChange,
+                    onConfirmPasswordChange = authViewModel::onConfirmPasswordChange,
+                    onRegister = authViewModel::register,
                     onLoginClick = {
-                        password = ""
-                        confirmPassword = ""
-                        clearErrors()
+                        authViewModel.onAuthScreenSwitched()
                         navController.popBackStack(
                             route = AppRoutes.REGISTER,
                             inclusive = true
@@ -219,40 +146,42 @@ fun FinTrackNavHost() {
             }
 
             composable(AppRoutes.HOME) {
+                val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory)
+                val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
                 DashboardScreen(
-                    email = signedInEmail,
-                    financeRepository = financeRepository,
-                    transactions = transactions,
-                    onLogout = {
-                        signedInEmail = ""
-                        email = ""
-                        password = ""
-                        confirmPassword = ""
-                        clearErrors()
-                        navController.navigate(AppRoutes.LOGIN) {
-                            popUpTo(AppRoutes.HOME) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    }
+                    email = authState.signedInEmail.orEmpty(),
+                    state = homeState,
+                    onLogout = authViewModel::logout
                 )
             }
 
             composable(AppRoutes.TRANSACTIONS) {
+                val transactionViewModel: TransactionViewModel = viewModel(factory = viewModelFactory)
+                val state by transactionViewModel.uiState.collectAsStateWithLifecycle()
                 TransactionsScreen(
-                    transactions = transactions,
-                    categories = categories,
+                    transactions = state.transactions,
+                    categories = state.categories,
                     onAddTransaction = { navController.navigate(AppRoutes.ADD_TRANSACTION) }
                 )
             }
 
             composable(AppRoutes.ADD_TRANSACTION) {
+                // Scoped to this destination, so an unsaved form is discarded when it is closed.
+                val transactionViewModel: TransactionViewModel = viewModel(factory = viewModelFactory)
+                val state by transactionViewModel.uiState.collectAsStateWithLifecycle()
+                val isSaved = state.form.isSaved
+                LaunchedEffect(isSaved) {
+                    if (isSaved) navController.popBackStack()
+                }
                 AddTransactionScreen(
-                    categories = categories,
-                    onSave = { transaction ->
-                        financeRepository.addTransaction(transaction)
-                        transactions = financeRepository.getTransactions()
-                        navController.popBackStack()
-                    },
+                    form = state.form,
+                    availableCategories = state.availableCategories,
+                    onDescriptionChange = transactionViewModel::onDescriptionChange,
+                    onAmountChange = transactionViewModel::onAmountChange,
+                    onTypeChange = transactionViewModel::onTypeChange,
+                    onCategoryChange = transactionViewModel::onCategoryChange,
+                    onDateChange = transactionViewModel::onDateChange,
+                    onSave = transactionViewModel::saveTransaction,
                     onBack = { navController.popBackStack() }
                 )
             }

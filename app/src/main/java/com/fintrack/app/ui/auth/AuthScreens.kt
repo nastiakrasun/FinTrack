@@ -30,6 +30,7 @@ fun LoginScreen(
     emailError: String?,
     passwordError: String?,
     formError: String?,
+    isLoading: Boolean,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit,
@@ -43,6 +44,7 @@ fun LoginScreen(
         emailError = emailError,
         passwordError = passwordError,
         formError = formError,
+        isLoading = isLoading,
         submitLabel = "Log in",
         onEmailChange = onEmailChange,
         onPasswordChange = onPasswordChange,
@@ -64,6 +66,7 @@ fun RegistrationScreen(
     passwordError: String?,
     confirmPasswordError: String?,
     formError: String?,
+    isLoading: Boolean,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
@@ -78,6 +81,7 @@ fun RegistrationScreen(
         emailError = emailError,
         passwordError = passwordError,
         formError = formError,
+        isLoading = isLoading,
         submitLabel = "Create account",
         onEmailChange = onEmailChange,
         onPasswordChange = onPasswordChange,
@@ -102,6 +106,7 @@ private fun AuthForm(
     emailError: String?,
     passwordError: String?,
     formError: String?,
+    isLoading: Boolean,
     submitLabel: String,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
@@ -171,9 +176,10 @@ private fun AuthForm(
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = onSubmit,
+            enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(submitLabel)
+            Text(if (isLoading) "Please wait…" else submitLabel)
         }
         footer()
         Spacer(Modifier.height(12.dp))

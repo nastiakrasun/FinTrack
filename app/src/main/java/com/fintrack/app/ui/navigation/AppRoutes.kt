@@ -10,4 +10,6 @@ object AppRoutes {
     const val ADD_TRANSACTION = "add_transaction"
 
     val main = listOf(HOME, TRANSACTIONS, BUDGET, STATISTICS)
+    val unauthenticated = listOf(LOGIN, REGISTER)
+    val authenticated = main + ADD_TRANSACTION
 }

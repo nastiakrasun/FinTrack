@@ -36,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,32 +44,25 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fintrack.app.domain.model.Category
-import com.fintrack.app.domain.model.CategoryType
-import com.fintrack.app.domain.model.Transaction
 import com.fintrack.app.domain.model.TransactionType
 import com.fintrack.app.ui.components.FormTextField
-import com.fintrack.app.ui.form.TransactionFormErrors
-import com.fintrack.app.ui.form.TransactionFormInput
-import com.fintrack.app.ui.form.TransactionFormResult
-import com.fintrack.app.ui.form.toTransaction
-import com.fintrack.app.ui.form.validateTransactionForm
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
 @Composable
 fun AddTransactionScreen(
-    categories: List<Category>,
-    onSave: (Transaction) -> Unit,
+    form: TransactionFormState,
+    availableCategories: List<Category>,
+    onDescriptionChange: (String) -> Unit,
+    onAmountChange: (String) -> Unit,
+    onTypeChange: (TransactionType) -> Unit,
+    onCategoryChange: (String) -> Unit,
+    onDateChange: (LocalDate) -> Unit,
+    onSave: () -> Unit,
     onBack: () -> Unit
 ) {
-    var description by rememberSaveable { mutableStateOf("") }
-    var amount by rememberSaveable { mutableStateOf("") }
-    var type by rememberSaveable { mutableStateOf(TransactionType.EXPENSE) }
-    var categoryId by rememberSaveable { mutableStateOf<String?>(null) }
-    var date by rememberSaveable { mutableStateOf<LocalDate?>(LocalDate.now()) }
-    var errors by remember { mutableStateOf(TransactionFormErrors()) }
-    val availableCategories = categories.filter { it.type == type.toCategoryType() }
+    val errors = form.errors
 
     Column(
         modifier = Modifier
@@ -96,14 +88,8 @@ fun AddTransactionScreen(
             )
             options.forEachIndexed { index, (option, label) ->
                 SegmentedButton(
-                    selected = type == option,
-                    onClick = {
-                        if (type != option) {
-                            type = option
-                            categoryId = null
-                            errors = errors.copy(category = null)
-                        }
-                    },
+                    selected = form.type == option,
+                    onClick = { onTypeChange(option) },
                     shape = SegmentedButtonDefaults.itemShape(index, options.size),
                     label = { Text(label) }
                 )
@@ -112,21 +98,15 @@ fun AddTransactionScreen(
         Spacer(Modifier.height(16.dp))
 
         FormTextField(
-            value = description,
-            onValueChange = {
-                description = it
-                errors = errors.copy(description = null)
-            },
+            value = form.description,
+            onValueChange = onDescriptionChange,
             label = "Description",
             error = errors.description
         )
         Spacer(Modifier.height(4.dp))
         FormTextField(
-            value = amount,
-            onValueChange = {
-                amount = it
-                errors = errors.copy(amount = null)
-            },
+            value = form.amount,
+            onValueChange = onAmountChange,
             label = "Amount",
             error = errors.amount,
             helper = "For example 125.50",
@@ -136,34 +116,20 @@ fun AddTransactionScreen(
         Spacer(Modifier.height(4.dp))
         CategoryDropdown(
             categories = availableCategories,
-            selectedId = categoryId,
+            selectedId = form.categoryId,
             error = errors.category,
-            onSelect = {
-                categoryId = it
-                errors = errors.copy(category = null)
-            }
+            onSelect = onCategoryChange
         )
         Spacer(Modifier.height(4.dp))
         DateField(
-            date = date,
+            date = form.date,
             error = errors.date,
-            onDateSelected = {
-                date = it
-                errors = errors.copy(date = null)
-            }
+            onDateSelected = onDateChange
         )
         Spacer(Modifier.height(16.dp))
 
         Button(
-            onClick = {
-                val result = validateTransactionForm(
-                    TransactionFormInput(description, amount, type, categoryId, date)
-                )
-                when (result) {
-                    is TransactionFormResult.Valid -> onSave(result.toTransaction())
-                    is TransactionFormResult.Invalid -> errors = result.errors
-                }
-            },
+            onClick = onSave,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save transaction")
@@ -271,9 +237,4 @@ private fun DateField(
             DatePicker(state = pickerState)
         }
     }
-}
-
-private fun TransactionType.toCategoryType(): CategoryType = when (this) {
-    TransactionType.INCOME -> CategoryType.INCOME
-    TransactionType.EXPENSE -> CategoryType.EXPENSE
 }

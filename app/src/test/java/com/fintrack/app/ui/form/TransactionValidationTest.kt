@@ -2,6 +2,7 @@ package com.fintrack.app.ui.form
 
 import com.fintrack.app.data.repository.MockFinanceRepository
 import com.fintrack.app.domain.model.TransactionType
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -96,7 +97,7 @@ class TransactionValidationTest {
     }
 
     @Test
-    fun addedTransactionIsReturnedByRepository() {
+    fun addedTransactionIsReturnedByRepository() = runBlocking {
         val repository = MockFinanceRepository()
         val before = repository.getTransactions().size
         val transaction = (validateTransactionForm(input()) as TransactionFormResult.Valid)
