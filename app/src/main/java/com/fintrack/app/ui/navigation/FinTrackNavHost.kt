@@ -31,6 +31,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.fintrack.app.ui.api.ApiDemoScreen
+import com.fintrack.app.ui.api.ApiDemoViewModel
 import com.fintrack.app.ui.auth.AuthViewModel
 import com.fintrack.app.ui.auth.LoginScreen
 import com.fintrack.app.ui.auth.RegistrationScreen
@@ -151,7 +153,8 @@ fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
                 DashboardScreen(
                     email = authState.signedInEmail.orEmpty(),
                     state = homeState,
-                    onLogout = authViewModel::logout
+                    onLogout = authViewModel::logout,
+                    onOpenApiDemo = { navController.navigate(AppRoutes.API_DEMO) }
                 )
             }
 
@@ -197,6 +200,16 @@ fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
                 PlaceholderScreen(
                     title = "Statistics",
                     message = "Financial statistics"
+                )
+            }
+
+            composable(AppRoutes.API_DEMO) {
+                val apiDemoViewModel: ApiDemoViewModel = viewModel(factory = viewModelFactory)
+                val state by apiDemoViewModel.uiState.collectAsStateWithLifecycle()
+                ApiDemoScreen(
+                    state = state,
+                    onCheckApi = apiDemoViewModel::checkApi,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
