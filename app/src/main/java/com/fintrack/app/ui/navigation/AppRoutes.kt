@@ -8,8 +8,9 @@ object AppRoutes {
     const val BUDGET = "budget"
     const val STATISTICS = "statistics"
     const val ADD_TRANSACTION = "add_transaction"
+    const val API_DEMO = "api_demo"
 
     val main = listOf(HOME, TRANSACTIONS, BUDGET, STATISTICS)
     val unauthenticated = listOf(LOGIN, REGISTER)
-    val authenticated = main + ADD_TRANSACTION
+    val authenticated = main + ADD_TRANSACTION + API_DEMO
 }

@@ -3,6 +3,7 @@ package com.fintrack.app.ui.auth
 import com.fintrack.app.MainDispatcherRule
 import com.fintrack.app.domain.repository.AuthRepository
 import com.fintrack.app.domain.repository.AuthResult
+import com.fintrack.app.domain.repository.SessionTokenStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Assert.assertEquals
@@ -34,13 +35,31 @@ private class FakeAuthRepository : AuthRepository {
     }
 }
 
+private class FakeSessionTokenStore : SessionTokenStore {
+    var hasToken = false
+        private set
+
+    override fun currentToken(): String? = if (hasToken) "test-token" else null
+
+    override fun activateDemoToken() {
+        hasToken = true
+    }
+
+    override fun clear() {
+        hasToken = false
+    }
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeAuthRepository()
-    private val viewModel by lazy { AuthViewModel(repository, mainDispatcherRule.dispatcher) }
+    private val tokenStore = FakeSessionTokenStore()
+    private val viewModel by lazy {
+        AuthViewModel(repository, mainDispatcherRule.dispatcher, tokenStore)
+    }
     private val state get() = viewModel.uiState.value
 
     private fun registerUser(email: String = "user@example.com", password: String = "secure-pass") {
@@ -99,6 +118,7 @@ class AuthViewModelTest {
         assertEquals("secure-pass", repository.lastPassword)
         assertEquals("", state.password)
         assertNull(state.formError)
+        assertTrue(tokenStore.hasToken)
     }
 
     @Test
@@ -135,6 +155,7 @@ class AuthViewModelTest {
         assertEquals("user@example.com", state.signedInEmail)
         assertEquals("", state.password)
         assertEquals("", state.confirmPassword)
+        assertTrue(tokenStore.hasToken)
     }
 
     @Test
@@ -185,12 +206,13 @@ class AuthViewModelTest {
         viewModel.logout()
 
         assertEquals(AuthUiState(), state)
+        assertFalse(tokenStore.hasToken)
     }
 
     @Test
     fun loadingStateIsShownWhileRepositoryCallIsRunning() {
         val dispatcher = StandardTestDispatcher()
-        val loadingViewModel = AuthViewModel(repository, dispatcher)
+        val loadingViewModel = AuthViewModel(repository, dispatcher, tokenStore)
         loadingViewModel.onEmailChange("user@example.com")
         loadingViewModel.onPasswordChange("secure-pass")
         loadingViewModel.onConfirmPasswordChange("secure-pass")

@@ -27,7 +27,8 @@ import java.util.Locale
 fun DashboardScreen(
     email: String,
     state: HomeUiState,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onOpenApiDemo: () -> Unit
 ) {
     val currencyFormat = remember {
         NumberFormat.getCurrencyInstance(Locale.forLanguageTag("nb-NO"))
@@ -65,6 +66,22 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("API and token demo", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Try a protected REST request using the current mock session token.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onOpenApiDemo) {
+                        Text("Open API demo")
+                    }
                 }
             }
         }

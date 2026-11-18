@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fintrack.app.domain.repository.AuthRepository
 import com.fintrack.app.domain.repository.AuthResult
+import com.fintrack.app.domain.repository.SessionTokenStore
 import com.fintrack.app.ui.form.validateConfirmPassword
 import com.fintrack.app.ui.form.validateEmail
 import com.fintrack.app.ui.form.validatePassword
@@ -32,7 +33,8 @@ data class AuthUiState(
 class AuthViewModel(
     private val authRepository: AuthRepository,
     // Password hashing is CPU-heavy, so repository calls run off the main thread.
-    private val workDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val workDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val sessionTokenStore: SessionTokenStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -92,6 +94,7 @@ class AuthViewModel(
         }
         viewModelScope.launch {
             val result = withContext(workDispatcher) { authRepository.login(email, password) }
+            if (result == AuthResult.SUCCESS) sessionTokenStore.activateDemoToken()
             _uiState.update {
                 if (result == AuthResult.SUCCESS) {
                     it.copy(isLoading = false, signedInEmail = email)
@@ -136,6 +139,7 @@ class AuthViewModel(
         }
         viewModelScope.launch {
             val result = withContext(workDispatcher) { authRepository.register(email, password) }
+            if (result == AuthResult.SUCCESS) sessionTokenStore.activateDemoToken()
             _uiState.update {
                 when (result) {
                     AuthResult.SUCCESS -> it.copy(isLoading = false, signedInEmail = email)
@@ -154,6 +158,7 @@ class AuthViewModel(
     }
 
     fun logout() {
+        sessionTokenStore.clear()
         _uiState.value = AuthUiState()
     }
 }
