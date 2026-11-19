@@ -16,7 +16,9 @@ import com.fintrack.app.ui.form.validateTransactionForm
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -36,13 +38,28 @@ data class TransactionFormState(
 
 data class TransactionUiState(
     val transactions: List<Transaction> = emptyList(),
+    val visibleTransactions: List<Transaction> = emptyList(),
     val categories: List<Category> = emptyList(),
+    val searchQuery: String = "",
+    val typeFilter: TransactionTypeFilter = TransactionTypeFilter.ALL,
+    val sortOrder: TransactionSortOrder = TransactionSortOrder.NEWEST,
     val form: TransactionFormState = TransactionFormState()
 ) {
     // Only categories matching the selected transaction type can be chosen.
     val availableCategories: List<Category>
         get() = categories.filter { it.type == form.type.toCategoryType() }
+
 }
+
+enum class TransactionTypeFilter { ALL, INCOME, EXPENSE }
+
+enum class TransactionSortOrder { NEWEST, OLDEST, AMOUNT_HIGH_TO_LOW, AMOUNT_LOW_TO_HIGH }
+
+private data class TransactionFilters(
+    val query: String = "",
+    val type: TransactionTypeFilter = TransactionTypeFilter.ALL,
+    val sort: TransactionSortOrder = TransactionSortOrder.NEWEST
+)
 
 class TransactionViewModel(
     private val financeRepository: FinanceRepository,
@@ -55,15 +72,68 @@ class TransactionViewModel(
     )
     val uiState: StateFlow<TransactionUiState> = _uiState.asStateFlow()
 
+    private val filters = MutableStateFlow(TransactionFilters())
+
     init {
-        financeRepository.observeTransactions()
-            .onEach { transactions ->
-                _uiState.update { it.copy(transactions = transactions.newestFirst()) }
+        combine(
+            financeRepository.observeTransactions(),
+            financeRepository.observeCategories(),
+            filters
+        ) { transactions, categories, currentFilters ->
+            val query = currentFilters.query
+            val typeFilter = currentFilters.type
+            val sortOrder = currentFilters.sort
+            val categoryNames = categories.associate { it.id to it.name }
+            val filtered = transactions
+                .filter { transaction ->
+                    val matchesType = when (typeFilter) {
+                        TransactionTypeFilter.ALL -> true
+                        TransactionTypeFilter.INCOME -> transaction.type == TransactionType.INCOME
+                        TransactionTypeFilter.EXPENSE -> transaction.type == TransactionType.EXPENSE
+                    }
+                    val normalizedQuery = query.trim().lowercase()
+                    val matchesQuery = normalizedQuery.isBlank() ||
+                        transaction.description.lowercase().contains(normalizedQuery) ||
+                        transaction.date.toString().contains(normalizedQuery) ||
+                        categoryNames[transaction.categoryId]?.lowercase()?.contains(normalizedQuery) == true
+                    matchesType && matchesQuery
+                }
+                .let { list ->
+                    when (sortOrder) {
+                        TransactionSortOrder.NEWEST -> list.newestFirst()
+                        TransactionSortOrder.OLDEST -> list.sortedBy(Transaction::date)
+                        TransactionSortOrder.AMOUNT_HIGH_TO_LOW ->
+                            list.sortedByDescending(Transaction::amountMinorUnits)
+                        TransactionSortOrder.AMOUNT_LOW_TO_HIGH ->
+                            list.sortedBy(Transaction::amountMinorUnits)
+                    }
+                }
+            Triple(transactions.newestFirst(), categories, filtered)
+        }.onEach { (transactions, categories, visibleTransactions) ->
+            _uiState.update {
+                it.copy(
+                    transactions = transactions,
+                    categories = categories,
+                    visibleTransactions = visibleTransactions
+                )
             }
+        }
             .launchIn(viewModelScope)
-        financeRepository.observeCategories()
-            .onEach { categories -> _uiState.update { it.copy(categories = categories) } }
-            .launchIn(viewModelScope)
+    }
+
+    fun onSearchQueryChange(value: String) {
+        _uiState.update { it.copy(searchQuery = value) }
+        filters.update { it.copy(query = value) }
+    }
+
+    fun onTypeFilterChange(value: TransactionTypeFilter) {
+        _uiState.update { it.copy(typeFilter = value) }
+        filters.update { it.copy(type = value) }
+    }
+
+    fun onSortOrderChange(value: TransactionSortOrder) {
+        _uiState.update { it.copy(sortOrder = value) }
+        filters.update { it.copy(sort = value) }
     }
 
     fun onDescriptionChange(value: String) = updateForm {

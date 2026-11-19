@@ -8,17 +8,29 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -33,16 +45,20 @@ import java.util.Locale
 fun TransactionsScreen(
     transactions: List<Transaction>,
     categories: List<Category>,
-    onAddTransaction: () -> Unit
+    searchQuery: String,
+    typeFilter: TransactionTypeFilter,
+    sortOrder: TransactionSortOrder,
+    onSearchQueryChange: (String) -> Unit,
+    onTypeFilterChange: (TransactionTypeFilter) -> Unit,
+    onSortOrderChange: (TransactionSortOrder) -> Unit,
+    onAddTransaction: () -> Unit,
+    onOpenMap: () -> Unit
 ) {
     val currencyFormat = remember {
         NumberFormat.getCurrencyInstance(Locale.forLanguageTag("nb-NO"))
     }
     val categoryNames = remember(categories) { categories.associate { it.id to it.name } }
-    // Reversed first so the most recently added item comes first among the same date.
-    val sortedTransactions = remember(transactions) {
-        transactions.asReversed().sortedByDescending(Transaction::date)
-    }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -51,17 +67,94 @@ fun TransactionsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Transactions", style = MaterialTheme.typography.headlineMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Transactions", style = MaterialTheme.typography.headlineMedium)
+                    TextButton(onClick = onOpenMap) {
+                        Icon(Icons.Filled.Map, contentDescription = null)
+                        Text(" Map")
+                    }
+                }
             }
-            if (sortedTransactions.isEmpty()) {
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search transactions") },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(Icons.Filled.Search, contentDescription = null)
+                    }
+                )
+            }
+            item {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TransactionTypeFilter.entries.forEach { filter ->
+                        FilterChip(
+                            selected = typeFilter == filter,
+                            onClick = { onTypeFilterChange(filter) },
+                            label = {
+                                Text(
+                                    when (filter) {
+                                        TransactionTypeFilter.ALL -> "All"
+                                        TransactionTypeFilter.INCOME -> "Income"
+                                        TransactionTypeFilter.EXPENSE -> "Expense"
+                                    }
+                                )
+                            }
+                        )
+                    }
+                    TextButton(onClick = { sortMenuExpanded = true }) {
+                        Text(
+                            when (sortOrder) {
+                                TransactionSortOrder.NEWEST -> "Newest"
+                                TransactionSortOrder.OLDEST -> "Oldest"
+                                TransactionSortOrder.AMOUNT_HIGH_TO_LOW -> "Amount ↓"
+                                TransactionSortOrder.AMOUNT_LOW_TO_HIGH -> "Amount ↑"
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false }
+                        ) {
+                            TransactionSortOrder.entries.forEach { order ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            when (order) {
+                                                TransactionSortOrder.NEWEST -> "Newest first"
+                                                TransactionSortOrder.OLDEST -> "Oldest first"
+                                                TransactionSortOrder.AMOUNT_HIGH_TO_LOW -> "Amount: high to low"
+                                                TransactionSortOrder.AMOUNT_LOW_TO_HIGH -> "Amount: low to high"
+                                            }
+                                        )
+                                    },
+                                    onClick = {
+                                        onSortOrderChange(order)
+                                        sortMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (transactions.isEmpty()) {
                 item {
                     Text(
-                        text = "Your transactions will appear here",
+                        text = "No transactions match these filters.",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
-            items(sortedTransactions, key = Transaction::id) { transaction ->
+            items(transactions, key = Transaction::id) { transaction ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier

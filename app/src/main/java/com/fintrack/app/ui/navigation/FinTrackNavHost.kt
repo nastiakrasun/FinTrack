@@ -38,6 +38,7 @@ import com.fintrack.app.ui.auth.LoginScreen
 import com.fintrack.app.ui.auth.RegistrationScreen
 import com.fintrack.app.ui.home.DashboardScreen
 import com.fintrack.app.ui.home.HomeViewModel
+import com.fintrack.app.ui.location.TransactionMapScreen
 import com.fintrack.app.ui.transactions.AddTransactionScreen
 import com.fintrack.app.ui.transactions.TransactionViewModel
 import com.fintrack.app.ui.transactions.TransactionsScreen
@@ -162,9 +163,16 @@ fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
                 val transactionViewModel: TransactionViewModel = viewModel(factory = viewModelFactory)
                 val state by transactionViewModel.uiState.collectAsStateWithLifecycle()
                 TransactionsScreen(
-                    transactions = state.transactions,
+                    transactions = state.visibleTransactions,
                     categories = state.categories,
-                    onAddTransaction = { navController.navigate(AppRoutes.ADD_TRANSACTION) }
+                    searchQuery = state.searchQuery,
+                    typeFilter = state.typeFilter,
+                    sortOrder = state.sortOrder,
+                    onSearchQueryChange = transactionViewModel::onSearchQueryChange,
+                    onTypeFilterChange = transactionViewModel::onTypeFilterChange,
+                    onSortOrderChange = transactionViewModel::onSortOrderChange,
+                    onAddTransaction = { navController.navigate(AppRoutes.ADD_TRANSACTION) },
+                    onOpenMap = { navController.navigate(AppRoutes.MAP) }
                 )
             }
 
@@ -211,6 +219,10 @@ fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
                     onCheckApi = apiDemoViewModel::checkApi,
                     onBack = { navController.popBackStack() }
                 )
+            }
+
+            composable(AppRoutes.MAP) {
+                TransactionMapScreen(onBack = { navController.popBackStack() })
             }
         }
     }
