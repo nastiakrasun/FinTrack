@@ -10,7 +10,11 @@ import com.fintrack.app.data.remote.RetrofitDemoApiDataSource
 import com.fintrack.app.data.repository.InMemoryDemoAuthRepository
 import com.fintrack.app.data.repository.RemoteDemoApiRepository
 import com.fintrack.app.data.repository.RoomFinanceRepository
+import com.fintrack.app.data.sensor.AndroidBatteryAlertNotifier
+import com.fintrack.app.data.sensor.AndroidBatteryMonitorRepository
 import com.fintrack.app.domain.repository.AuthRepository
+import com.fintrack.app.domain.repository.BatteryAlertNotifier
+import com.fintrack.app.domain.repository.BatteryMonitorRepository
 import com.fintrack.app.domain.repository.DemoApiRepository
 import com.fintrack.app.domain.repository.FinanceRepository
 import com.fintrack.app.domain.repository.SessionTokenStore
@@ -52,6 +56,9 @@ class AppContainer(context: Context) {
         categoryDao = database.categoryDao(),
         budgetDao = database.budgetDao()
     )
+    val batteryMonitorRepository: BatteryMonitorRepository =
+        AndroidBatteryMonitorRepository(context)
+    val batteryAlertNotifier: BatteryAlertNotifier = AndroidBatteryAlertNotifier(context)
 
     init {
         applicationScope.launch { DefaultDataSeeder(database).seedIfNeeded() }
