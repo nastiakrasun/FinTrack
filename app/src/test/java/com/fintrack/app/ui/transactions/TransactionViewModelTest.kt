@@ -6,10 +6,10 @@ import com.fintrack.app.domain.model.CategoryType
 import com.fintrack.app.domain.model.TransactionType
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
@@ -141,5 +141,28 @@ class TransactionViewModelTest {
         other.saveTransaction()
 
         assertEquals("other-id", state.transactions.first().id)
+    }
+
+    @Test
+    fun searchMatchesTransactionDescriptionWithoutCaseSensitivity() {
+        viewModel.onSearchQueryChange("rema")
+
+        assertEquals(listOf("rema-1"), state.visibleTransactions.map { it.id })
+    }
+
+    @Test
+    fun typeFilterShowsOnlyIncomeTransactions() {
+        viewModel.onTypeFilterChange(TransactionTypeFilter.INCOME)
+
+        assertFalse(state.visibleTransactions.isEmpty())
+        assertTrue(state.visibleTransactions.all { it.type == TransactionType.INCOME })
+    }
+
+    @Test
+    fun amountSortOrdersTransactionsFromLargestToSmallest() {
+        viewModel.onSortOrderChange(TransactionSortOrder.AMOUNT_HIGH_TO_LOW)
+
+        val amounts = state.visibleTransactions.map { it.amountMinorUnits }
+        assertEquals(amounts.sortedDescending(), amounts)
     }
 }
