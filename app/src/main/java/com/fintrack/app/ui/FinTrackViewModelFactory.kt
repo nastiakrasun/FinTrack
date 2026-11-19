@@ -16,7 +16,13 @@ fun finTrackViewModelFactory(container: AppContainer) = viewModelFactory {
             sessionTokenStore = container.sessionTokenStore
         )
     }
-    initializer { HomeViewModel(container.financeRepository) }
+    initializer {
+        HomeViewModel(
+            financeRepository = container.financeRepository,
+            batteryMonitorRepository = container.batteryMonitorRepository,
+            batteryAlertNotifier = container.batteryAlertNotifier
+        )
+    }
     initializer { TransactionViewModel(container.financeRepository) }
     initializer { ApiDemoViewModel(container.demoApiRepository) }
 }

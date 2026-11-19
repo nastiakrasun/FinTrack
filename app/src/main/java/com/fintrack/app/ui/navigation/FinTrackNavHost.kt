@@ -155,7 +155,8 @@ fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
                     email = authState.signedInEmail.orEmpty(),
                     state = homeState,
                     onLogout = authViewModel::logout,
-                    onOpenApiDemo = { navController.navigate(AppRoutes.API_DEMO) }
+                    onOpenApiDemo = { navController.navigate(AppRoutes.API_DEMO) },
+                    onBatteryAlertsEnabled = homeViewModel::setBatteryAlertsEnabled
                 )
             }
 
