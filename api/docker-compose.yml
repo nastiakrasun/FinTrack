@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fintrack
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    build: .
+    environment:
+      Database__Host: db
+      Database__Name: fintrack
+      Database__Username: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      Database__Password: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    command: ["--migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      Database__Host: db
+      Database__Name: fintrack
+      Database__Username: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      Database__Password: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      Jwt__Issuer: ${JWT_ISSUER:?Set JWT_ISSUER in .env}
+      Jwt__Audience: ${JWT_AUDIENCE:?Set JWT_AUDIENCE in .env}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "dotnet", "FinTrack.Api.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 8s
+      retries: 6
+      start_period: 15s
+
+volumes:
+  postgres_data:
