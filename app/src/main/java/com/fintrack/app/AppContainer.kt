@@ -12,10 +12,12 @@ import com.fintrack.app.data.repository.RemoteDemoApiRepository
 import com.fintrack.app.data.repository.RoomFinanceRepository
 import com.fintrack.app.data.sensor.AndroidBatteryAlertNotifier
 import com.fintrack.app.data.sensor.AndroidBatteryMonitorRepository
+import com.fintrack.app.data.sensor.AndroidDeviceResourceMonitor
 import com.fintrack.app.domain.repository.AuthRepository
 import com.fintrack.app.domain.repository.BatteryAlertNotifier
 import com.fintrack.app.domain.repository.BatteryMonitorRepository
 import com.fintrack.app.domain.repository.DemoApiRepository
+import com.fintrack.app.domain.repository.DeviceResourceMonitor
 import com.fintrack.app.domain.repository.FinanceRepository
 import com.fintrack.app.domain.repository.SessionTokenStore
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +61,7 @@ class AppContainer(context: Context) {
     val batteryMonitorRepository: BatteryMonitorRepository =
         AndroidBatteryMonitorRepository(context)
     val batteryAlertNotifier: BatteryAlertNotifier = AndroidBatteryAlertNotifier(context)
+    val deviceResourceMonitor: DeviceResourceMonitor = AndroidDeviceResourceMonitor(context)
 
     init {
         applicationScope.launch { DefaultDataSeeder(database).seedIfNeeded() }

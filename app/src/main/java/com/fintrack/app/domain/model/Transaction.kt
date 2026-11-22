@@ -13,7 +13,8 @@ data class Transaction(
     val amountMinorUnits: Long,
     val type: TransactionType,
     val categoryId: String?,
-    val date: LocalDate
+    val date: LocalDate,
+    val attachmentUri: String? = null
 )
 
 // Newest date first; for the same date, the most recently added transaction comes first.

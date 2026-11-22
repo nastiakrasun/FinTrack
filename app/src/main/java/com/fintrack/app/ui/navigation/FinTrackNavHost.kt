@@ -156,7 +156,9 @@ fun FinTrackNavHost(viewModelFactory: ViewModelProvider.Factory) {
                     state = homeState,
                     onLogout = authViewModel::logout,
                     onOpenApiDemo = { navController.navigate(AppRoutes.API_DEMO) },
-                    onBatteryAlertsEnabled = homeViewModel::setBatteryAlertsEnabled
+                    onBatteryAlertsEnabled = homeViewModel::setBatteryAlertsEnabled,
+                    onImportTransactions = homeViewModel::importTransactions,
+                    onAttachFile = homeViewModel::attachFile
                 )
             }
 

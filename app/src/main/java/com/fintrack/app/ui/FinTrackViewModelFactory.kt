@@ -20,7 +20,8 @@ fun finTrackViewModelFactory(container: AppContainer) = viewModelFactory {
         HomeViewModel(
             financeRepository = container.financeRepository,
             batteryMonitorRepository = container.batteryMonitorRepository,
-            batteryAlertNotifier = container.batteryAlertNotifier
+            batteryAlertNotifier = container.batteryAlertNotifier,
+            deviceResourceMonitor = container.deviceResourceMonitor
         )
     }
     initializer { TransactionViewModel(container.financeRepository) }

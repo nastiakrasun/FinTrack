@@ -26,5 +26,6 @@ data class TransactionEntity(
     val amountMinorUnits: Long,
     val type: TransactionType,
     val categoryId: String?,
-    val date: LocalDate
+    val date: LocalDate,
+    val attachmentUri: String? = null
 )

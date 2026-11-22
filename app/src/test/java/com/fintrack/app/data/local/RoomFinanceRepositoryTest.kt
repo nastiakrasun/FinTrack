@@ -66,7 +66,9 @@ class RoomFinanceRepositoryTest {
 
     @Test
     fun insertedTransactionCanBeReadBackWithExactMinorUnits() = runBlocking {
-        val saved = transaction("t1", amount = 4_550)
+        val saved = transaction("t1", amount = 4_550).copy(
+            attachmentUri = "content://receipts/t1"
+        )
 
         repository.addTransaction(saved)
 

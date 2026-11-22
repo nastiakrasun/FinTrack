@@ -1,5 +1,6 @@
 package com.fintrack.app.ui.home
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,12 @@ fun MonthlySpendingChart(periods: List<SpendingPeriod>) {
     val primary = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.outlineVariant
     val maxAmount = periods.maxOfOrNull(SpendingPeriod::amountMinorUnits)?.coerceAtLeast(1L) ?: 1L
+    val animatedFractions = periods.map { period ->
+        animateFloatAsState(
+            targetValue = period.amountMinorUnits.toFloat() / maxAmount.toFloat(),
+            label = "monthly-spending-${period.label}"
+        ).value
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Canvas(
@@ -64,9 +71,8 @@ fun MonthlySpendingChart(periods: List<SpendingPeriod>) {
                 strokeWidth = 1.dp.toPx()
             )
             val slotWidth = size.width / (periods.size * 2f)
-            periods.forEachIndexed { index, period ->
-                val barHeight = chartHeight *
-                    (period.amountMinorUnits.toFloat() / maxAmount.toFloat())
+            periods.forEachIndexed { index, _ ->
+                val barHeight = chartHeight * animatedFractions[index]
                 val barWidth = slotWidth.coerceAtMost(48.dp.toPx())
                 val x = slotWidth * (index * 2 + 1) - barWidth / 2
                 drawRoundRect(

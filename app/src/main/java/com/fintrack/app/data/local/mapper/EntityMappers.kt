@@ -13,7 +13,8 @@ fun TransactionEntity.toDomain() = Transaction(
     amountMinorUnits = amountMinorUnits,
     type = type,
     categoryId = categoryId,
-    date = date
+    date = date,
+    attachmentUri = attachmentUri
 )
 
 fun Transaction.toEntity() = TransactionEntity(
@@ -22,7 +23,8 @@ fun Transaction.toEntity() = TransactionEntity(
     amountMinorUnits = amountMinorUnits,
     type = type,
     categoryId = categoryId,
-    date = date
+    date = date,
+    attachmentUri = attachmentUri
 )
 
 fun CategoryEntity.toDomain() = Category(id = id, name = name, type = type)
